@@ -4,7 +4,7 @@ package settings
  * The number of nodes participating in the blockchain network.
  */
 //TODO revert
-var NUM_OF_NODES int = 12000 //600;//800;//6000;
+var NUM_OF_NODES int = 10 //600;//800;//6000;
 // public static final int NUM_OF_NODES = 600;//600;//800;//6000;
 
 /**
@@ -72,8 +72,11 @@ var BLOCK_SIZE int64 = 20000 //6110;//8000;//535000;//0.5MB
 // protocol type
 const (
 	BLOCK_MESSAGE = "block_message"
+
+	DAG_BLOCK = "dag"
+	CHAIN_BLOCK = "chain"
 )
 
 
 // Other parameter
-var Throughput int = 16
+var THROUGHPUT int = 2  - 1

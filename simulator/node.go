@@ -73,9 +73,14 @@ type Node struct {
 	orphans *hashset.Set
 
 	/**
-	 * The current minting task
+	 * The current mining task(default for chain-block mining)
 	 */
-	mintingTask ITask
+	miningTask ITask
+
+	/**
+	 * The current dag-block mining task
+	 */
+	miningDagTask ITask
 
 	/**
 	 * In the process of sending blocks.
@@ -85,7 +90,7 @@ type Node struct {
 
 	toSendBlocks *list.List
 
-	dowenloadedBlocks lists.List
+	downloadedBlocks lists.List
 
 
 	processingTime int
@@ -111,13 +116,14 @@ func NewNode(nodeID int, numConnection int,
 		miningPower: miningPower,
 		//routingTable:      routingTable,
 		//consensusAlgo:     consensusAlgo,
-		block:             nil,
-		orphans:           hashset.New(),
-		mintingTask:       nil,
-		sendingBlock:      false,
-		toSendBlocks:      new(list.List),
-		dowenloadedBlocks: arraylist.New() ,
-		processingTime:    settings.PROCESS_TIME,
+		block:            nil,
+		orphans:          hashset.New(),
+		miningTask:       nil,
+		miningDagTask: 	  nil,
+		sendingBlock:     false,
+		toSendBlocks:     new(list.List),
+		downloadedBlocks: arraylist.New() ,
+		processingTime:   settings.PROCESS_TIME,
 	}
 
 	// Using the reflect function to find the Initial TABLE and ALGO
@@ -269,17 +275,17 @@ func (n *Node) GenesisBlock() {
 }
 
 /**
- * Adds a new block to the to chain. If node was minting that task instance is abandoned, and
+ * Adds a new block to the to chain. If node was mining that task instance is abandoned, and
  * the new block arrival is handled.
  *
  * @param newBlock the new block
  */
 func (n *Node) addToChain(newBlock IBlock) {
-	// If the node has been minting
-	if n.mintingTask != nil {
+	// If the node has been mining
+	if n.miningTask != nil {
 		//Timer.removeTask
-		RemoveTask(n.mintingTask)
-		n.mintingTask = nil
+		RemoveTask(n.miningTask)
+		n.miningTask = nil
 	}
 	// Update the current block
 	n.block = newBlock
@@ -330,16 +336,26 @@ func (n *Node) addOrphans(orphanBlock IBlock, validBlock IBlock) {
 }
 
 /**
- * Generates a new minting task and registers it
+ * Generates a new mining task and registers it
  */
-func (n *Node) minting() {
-	mintingTask := n.consensusAlgo.Minting()
-	n.mintingTask = mintingTask
-	if mintingTask != nil {
-		PutTask(mintingTask)
+func (n *Node) mining() {
+	miningTask := n.consensusAlgo.Mining()
+	n.miningTask = miningTask
+	if miningTask != nil {
+		PutTask(miningTask)
 	}
 }
 
+/**
+ * Generates a new mining task and registers it
+ */
+func (n *Node) miningDag() {
+	miningDagTask := n.consensusAlgo.DagMining()
+	n.miningDagTask = miningDagTask
+	if miningDagTask != nil {
+		PutTask(miningDagTask)
+	}
+}
 
 /**
  * Receive block.
@@ -348,37 +364,46 @@ func (n *Node) minting() {
  */
 // TODO
 func (n *Node) receiveBlock(block IBlock) {
-	if n.consensusAlgo.IsReceivedBlockValid(block, n.block) {
-		//如果共识协议判断该区块是正确的
-		if n.block != nil && !n.block.IsOnSameChainAs(block) {
-			// 如果主链的最新区块不是空的 ，并且给的区块不在本条主链上， 那么加入到孤块中
-			// If orphan mark orphan
-			n.addOrphans(n.block, block)
+	if block.GetType() == settings.CHAIN_BLOCK{
+		if n.consensusAlgo.IsReceivedBlockValid(block, n.block) {
+			//如果共识协议判断该区块是正确的
+			if n.block != nil && !n.block.IsOnSameChainAs(block) {
+				// 如果主链的最新区块不是空的 ，并且给的区块不在本条主链上， 那么加入到孤块中
+				// If orphan mark orphan
+				n.addOrphans(n.block, block)
+			}
+			// Else add to canonical chain
+			// 添加到达区块的同时，废弃本节点的挖矿任务，同时通知模拟器区块的到达
+			n.addToChain(block)
+			// Generates a new mining task
+			// 新建挖矿任务
+			n.mining()
+			// update DAGMing
+			// TODO update DAGMing
+
+
+			// Advertise received block
+			// 广播给其他节点区块的到达
+			// 此处可以优化一点点（不要再发给我了）
+			n.toSendBlocks.PushBack(block)
+			if !n.sendingBlock {
+				n.SendNextBlockMessage()
+			}
+		} else if !n.orphans.Contains(block) && !block.IsOnSameChainAs(n.block) {
+			// 如果共识协议不正确，如果本节点的孤块列表中没有包含该区块 ， 并且该区块也不在主链上
+			// 加入到孤块中，直接通知模拟器区块的到达
+			// TODO better understand - what if orphan is not valid?
+			// If the block was not valid but was an unknown orphan and is not on the same chain as the
+			// current block
+			// 会根据孤块的父区块 和 本区块一直追溯，找到交叉点
+			n.addOrphans(block, n.block)
+			Simulator.ArriveBlock(block, n)
 		}
-		// FIXME ???? 注释else，但是实际没有,只是为了打印出来，前面做了一个标记
-		// Else add to canonical chain
-		// 添加到达区块的同时，废弃本节点的挖矿任务，同时通知模拟器区块的到达
-		n.addToChain(block)
-		// Generates a new minting task
-		// 新建挖矿任务
-		n.minting()
-		// Advertise received block
-		// 广播给其他节点区块的到达
-		// 此处可以优化一点点（不要再发给我了）
-		n.toSendBlocks.PushBack(block)
-		if !n.sendingBlock {
-			n.SendNextBlockMessage()
-		}
-	} else if !n.orphans.Contains(block) && !block.IsOnSameChainAs(n.block) {
-		// 如果共识协议不正确，如果本节点的孤块列表中没有包含该区块 ， 并且该区块也不在主链上
-		// 加入到孤块中，直接通知模拟器区块的到达
-		// TODO better understand - what if orphan is not valid?
-		// If the block was not valid but was an unknown orphan and is not on the same chain as the
-		// current block
-		// 会根据孤块的父区块 和 本区块一直追溯，找到交叉点
-		n.addOrphans(block, n.block)
-		Simulator.ArriveBlock(block, n)
+	}else if block.GetType() == settings.DAG_BLOCK{
+			// TODO handle and restart DAG_Mining
+
 	}
+
 
 }
 
@@ -393,18 +418,18 @@ func (n *Node) ReceiveMessage(message IAbstractMessageTask) {
 	if blockMessage, ok := message.(*BlockMessageTask); ok {
 
 		block := blockMessage.GetBlock()
-		if n.dowenloadedBlocks.Contains(block){
+		if n.downloadedBlocks.Contains(block){
 			// 如果接收到的区块最近已经下载过了，那么就丢弃
 			return
 		}
-		if n.dowenloadedBlocks.Size() > 10 {
+		if n.downloadedBlocks.Size() > 10 {
 			// 如果接收到的区块个数大于一定了阈值，那么删除比较早接收到的区块
-			n.dowenloadedBlocks.Remove(0)
+			n.downloadedBlocks.Remove(0)
 		}
 
 		// 接收到的区块为新的区块，那么对其进行处理
 		// 节点接收到区块后会再次开始挖矿和广播
-		n.dowenloadedBlocks.Add(block)
+		n.downloadedBlocks.Add(block)
 		n.receiveBlock(block)
 
 	}

@@ -15,19 +15,24 @@
 */
 package simulator
 
-import "math/big"
+import (
+	"acchain-sim/settings"
+	"math/big"
+)
 
 var _ IAbstractMintingTask = new(MintingTask)
 
 type MintingTask struct {
 	*AbstractMintingTask
 	difficulty *big.Int
+	taskType string
 }
 
-func NewMintingTask(minter *Node, interval int64, difficulty *big.Int) *MintingTask {
+func NewMintingTask(minter *Node, interval int64, difficulty *big.Int, taskType string) *MintingTask {
 	return &MintingTask{
 		NewAbstractMintingTask(minter, interval),
 		difficulty,
+		taskType,
 	}
 }
 
@@ -38,6 +43,13 @@ func (mt *MintingTask) Run() {
 		parent = mt.GetParent().(*ProofOfWorkBlock)
 	}
 
-	createdBlock := NewProofOfWorkBlock(parent, mt.GetMinter(), GetCurrentTime(), mt.difficulty)
-	mt.GetMinter().receiveBlock(createdBlock)
+	if mt.taskType == settings.CHAIN_BLOCK{
+		createdBlock := NewProofOfWorkBlock(parent, mt.GetMinter(), GetCurrentTime(), mt.difficulty)
+		mt.GetMinter().receiveBlock(createdBlock)
+	}
+
+	if mt.taskType == settings.DAG_BLOCK{
+		createdBlock := NewDagProofOfWorkBlock(parent, mt.GetMinter(), GetCurrentTime(), mt.difficulty)
+		mt.GetMinter().receiveBlock(createdBlock)
+	}
 }

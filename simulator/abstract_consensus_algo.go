@@ -17,7 +17,9 @@ package simulator
 
 type IAbstractConsensusAlgo interface {
 	GenesisBlock() IBlock
-	Minting() IAbstractMintingTask
+	GenesisDagBlock() IBlock
+	Mining() IAbstractMintingTask
+	DagMining() IAbstractMintingTask
 	IsReceivedBlockValid(receivedBlock IBlock, currentBlock IBlock) bool
 	GetSelfNode() *Node
 }
@@ -52,15 +54,27 @@ func (aca *AbstractConsensusAlgo) GenesisBlock() IBlock {
 	panic("implement me")
 }
 
-/**
- * Minting abstract minting task.
- *
- * @return the abstract minting task
- */
-func (aca *AbstractConsensusAlgo) Minting() IAbstractMintingTask {
+func (aca *AbstractConsensusAlgo) GenesisDagBlock() IBlock {
 	panic("implement me")
 }
 
+/**
+ * Minting abstract mining task.
+ *
+ * @return the abstract mining task
+ */
+func (aca *AbstractConsensusAlgo) Mining() IAbstractMintingTask {
+	panic("implement me")
+}
+
+/**
+ * Minting abstract mining task.
+ *
+ * @return the abstract mining task
+ */
+func (aca *AbstractConsensusAlgo) DagMining() IAbstractMintingTask {
+	panic("implement me")
+}
 /**
  * Tests if the receivedBlock is valid with regards to the current block.
  *

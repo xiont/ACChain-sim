@@ -36,10 +36,11 @@ func NewProofOfWork(selfNode *Node) *ProofOfWork {
  * Mints a new block by simulating Proof of Work.
  */
 //override
-func (pow *ProofOfWork) Minting() IAbstractMintingTask {
+func (pow *ProofOfWork) Mining() IAbstractMintingTask {
 	selfNode := pow.GetSelfNode()
 	parent := selfNode.GetBlock().(*ProofOfWorkBlock)
 	difficulty := parent.GetNextDifficulty()
+
 	var p float64 = 1.0 / float64(difficulty.Int64())
 	u := settings.Rand.NextFloat64()
 	//double u = random.nextDouble();
@@ -51,8 +52,27 @@ func (pow *ProofOfWork) Minting() IAbstractMintingTask {
 	} else {
 		interval := math.Log(u) / math.Log(1.0-p) / float64(selfNode.GetMiningPower())
 
+		// chain-block hard
+		return NewMintingTask(selfNode, int64(interval), difficulty,settings.CHAIN_BLOCK)
+	}
+}
 
-		return NewMintingTask(selfNode, int64(interval), difficulty)
+func (pow *ProofOfWork) DagMining() IAbstractMintingTask {
+	selfNode := pow.GetSelfNode()
+	parent := selfNode.GetBlock().(*ProofOfWorkBlock)
+	difficulty := parent.GetNextDifficulty()
+
+	var p float64 = 1.0 / float64(difficulty.Int64()/int64(settings.THROUGHPUT) )
+	u := settings.Rand.NextFloat64()
+	//double u = random.nextDouble();
+	// Task(minter,interval, difficulty)。
+	// Power越大 interval 越小。
+
+	if p <= math.Pow(2, -53) {
+		return nil
+	} else {
+		interval := math.Log(u) / math.Log(1.0-p) / float64(selfNode.GetMiningPower())
+		return NewMintingTask(selfNode, int64(interval), difficulty ,settings.DAG_BLOCK)
 	}
 }
 
@@ -120,3 +140,9 @@ func (pow *ProofOfWork) IsReceivedBlockValid(receivedBlock IBlock, currentBlock 
 func (pow *ProofOfWork) GenesisBlock() IBlock {
 	return (*ProofOfWorkBlock).GenesisBlock(nil, pow.GetSelfNode())
 }
+
+//Override
+func (pow *ProofOfWork) GenesisDagBlock() IBlock {
+	return (*ProofOfWorkBlock).GenesisDagBlock(nil, pow.GetSelfNode())
+}
+

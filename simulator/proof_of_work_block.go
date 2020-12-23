@@ -16,6 +16,7 @@
 package simulator
 
 import (
+	"acchain-sim/settings"
 	"acchain-sim/utils"
 	"math/big"
 )
@@ -29,11 +30,16 @@ type ProofOfWorkBlock struct {
 	difficulty      *big.Int
 	totalDifficulty *big.Int
 	nextDifficulty  *big.Int
+	blockType string
 }
 
 //Override
 func (powb *ProofOfWorkBlock) GetUUID() string {
 	return "PoW_Block@" + utils.CreateRandomString(10)
+}
+
+func (powb *ProofOfWorkBlock) GetType() string {
+	return powb.blockType
 }
 
 func NewProofOfWorkBlock(parent *ProofOfWorkBlock, minter *Node, time int64, difficulty *big.Int) *ProofOfWorkBlock {
@@ -55,8 +61,21 @@ func NewProofOfWorkBlock(parent *ProofOfWorkBlock, minter *Node, time int64, dif
 		difficulty,
 		totalDifficulty,
 		nextDifficulty,
+		settings.CHAIN_BLOCK,
 	}
 }
+
+func NewDagProofOfWorkBlock(parent *ProofOfWorkBlock, minter *Node, time int64, difficulty *big.Int) *ProofOfWorkBlock {
+
+	return &ProofOfWorkBlock{
+		NewBlock(parent, minter, time),
+		difficulty,
+		nil,
+		difficulty,
+		settings.DAG_BLOCK,
+	}
+}
+
 
 /**
  * Gets difficulty.
@@ -110,4 +129,24 @@ func (powb *ProofOfWorkBlock) GenesisBlock(minter *Node) *ProofOfWorkBlock {
 	GenesisNextDifficulty = GenesisNextDifficulty.Mul(big.NewInt(totalMiningPower), big.NewInt(Simulator.GetTargetInterval()))
 
 	return NewProofOfWorkBlock(nil, minter, 0, big.NewInt(0))
+}
+
+func (powb *ProofOfWorkBlock) GenesisDagBlock(minter *Node) *ProofOfWorkBlock {
+	var totalMiningPower int64 = 0
+	//计算所有区块的算力总和
+	//for (Node node : getSimulatedNodes()) {
+	//	totalMiningPower += node.getMiningPower();
+	//}
+	Simulator.GetSimulatedNodes().Each(func(index int, v interface{}) {
+		 totalMiningPower += v.(*Node).GetMiningPower()
+	})
+
+	//难度 = 总算力*区块间隔时间
+	// 相当于难度没有调整：
+	// 调整策略，取前几个区块的出块时间，与预计的总出块时间
+	// 难度（非难度值） = (预计的总出块时间/前几个区块的出块时间)*当前难度
+	// 比特币总每次调整不超过4倍
+	GenesisNextDifficulty = GenesisNextDifficulty.Mul(big.NewInt(totalMiningPower), big.NewInt(Simulator.GetTargetInterval()))
+
+	return NewDagProofOfWorkBlock(nil, minter, 0, big.NewInt(0))
 }

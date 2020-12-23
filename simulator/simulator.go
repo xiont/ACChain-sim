@@ -43,7 +43,7 @@ type simulator struct {
 	/**
 	 * A list of observed block propagation times. The map key represents the id of the node that
 	 * has seen the
-	 * block, the value represents the difference between the current time and the block minting
+	 * block, the value represents the difference between the current time and the block mining
 	 * time, effectively
 	 * recording the absolute time it took for a node to witness the block.
 	 * 观察到的块传播时间列表。映射键代表见过该区块的节点的id，值代表当前时间与区块铸币时间的差值，

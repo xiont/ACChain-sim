@@ -26,6 +26,7 @@ type IBlock interface {
 	GetBlockWithHeight(height int) IBlock
 	IsOnSameChainAs(block IBlock) bool
 	GetUUID() string
+	GetType() string
 }
 
 /**
@@ -52,7 +53,7 @@ type Block struct {
 	minter *Node
 
 	/**
-	 * Minting timestamp, absolute time since the beginning of the simulation.
+	 * Mining timestamp, absolute time since the beginning of the simulation.
 	 */
 	time int64
 
@@ -63,6 +64,10 @@ type Block struct {
 }
 
 func (b *Block) GetUUID() string {
+	panic("implement me")
+}
+
+func (b *Block) GetType() string {
 	panic("implement me")
 }
 
