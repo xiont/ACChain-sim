@@ -27,6 +27,8 @@ type IBlock interface {
 	IsOnSameChainAs(block IBlock) bool
 	GetUUID() string
 	GetType() string
+	GetConfirmedBlocks() []IBlock
+
 }
 
 /**
@@ -68,6 +70,10 @@ func (b *Block) GetUUID() string {
 }
 
 func (b *Block) GetType() string {
+	panic("implement me")
+}
+
+func (b *Block) GetConfirmedBlocks() []IBlock {
 	panic("implement me")
 }
 

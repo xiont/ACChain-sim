@@ -158,6 +158,7 @@ func main() {
 			printfile.BLOCK_LIST.Println(fmt.Sprintf("Orphan : %d : %s : %d",
 				value.(simulator.IBlock).GetHeight(), value.(simulator.IBlock).GetUUID(), value.(simulator.IBlock).GetTime()))
 		} else {
+
 			printfile.BLOCK_LIST.Println(fmt.Sprintf("OnChain : %d : %s : %d",
 				value.(simulator.IBlock).GetHeight(), value.(simulator.IBlock).GetUUID(), value.(simulator.IBlock).GetTime()))
 		}

@@ -1,2 +1,4 @@
 github.com/emirpasic/gods v1.12.0 h1:QAUIPSaCu4G+POclxeqb3F+WPpdKqFGlw36+yOzGlrg=
 github.com/emirpasic/gods v1.12.0/go.mod h1:YfzfFFoVP/catgzJb4IKIqXjX78Ha8FMSDh3ymbK86o=
+github.com/xiont/graph v0.0.0-20201223070059-4e9de105e72a h1:EjgwJzLayO5rYXYoVjM+xTMDVVs7TGdDuq921C9oDvs=
+github.com/xiont/graph v0.0.0-20201223070059-4e9de105e72a/go.mod h1:KlaheQKQTch4fLZgJntfCVm5ZIFadYgASGYwmPLyaTc=

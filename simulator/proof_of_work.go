@@ -53,13 +53,14 @@ func (pow *ProofOfWork) Mining() IAbstractMintingTask {
 		interval := math.Log(u) / math.Log(1.0-p) / float64(selfNode.GetMiningPower())
 
 		// chain-block hard
-		return NewMintingTask(selfNode, int64(interval), difficulty,settings.CHAIN_BLOCK)
+		return NewMintingTask(selfNode, int64(interval), difficulty,settings.CHAIN_BLOCK,[]IBlock{})
 	}
 }
 
 func (pow *ProofOfWork) DagMining() IAbstractMintingTask {
 	selfNode := pow.GetSelfNode()
 	parent := selfNode.GetBlock().(*ProofOfWorkBlock)
+
 	difficulty := parent.GetNextDifficulty()
 
 	var p float64 = 1.0 / float64(difficulty.Int64()/int64(settings.THROUGHPUT) )
@@ -72,7 +73,7 @@ func (pow *ProofOfWork) DagMining() IAbstractMintingTask {
 		return nil
 	} else {
 		interval := math.Log(u) / math.Log(1.0-p) / float64(selfNode.GetMiningPower())
-		return NewMintingTask(selfNode, int64(interval), difficulty ,settings.DAG_BLOCK)
+		return NewMintingTask(selfNode, int64(interval), difficulty ,settings.DAG_BLOCK,[]IBlock{})
 	}
 }
 

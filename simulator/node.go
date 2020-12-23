@@ -16,10 +16,12 @@
 package simulator
 
 import (
+	"acchain-sim/graph"
 	"acchain-sim/printfile"
 	"acchain-sim/settings"
 	"acchain-sim/utils"
 	"container/list"
+	"fmt"
 	"github.com/emirpasic/gods/lists"
 	"github.com/emirpasic/gods/lists/arraylist"
 	"github.com/emirpasic/gods/sets/hashset"
@@ -85,8 +87,9 @@ type Node struct {
 	/**
 	 * In the process of sending blocks.
 	 */
-	// TODO verify
 	sendingBlock bool
+	lastSendTime int64
+
 
 	toSendBlocks *list.List
 
@@ -94,6 +97,8 @@ type Node struct {
 
 
 	processingTime int
+
+	currentGraph *graph.Graph
 }
 
 /**
@@ -124,6 +129,8 @@ func NewNode(nodeID int, numConnection int,
 		toSendBlocks:     new(list.List),
 		downloadedBlocks: arraylist.New() ,
 		processingTime:   settings.PROCESS_TIME,
+		lastSendTime: 0,
+		currentGraph: graph.New(),
 	}
 
 	// Using the reflect function to find the Initial TABLE and ALGO
@@ -271,7 +278,9 @@ func (n *Node) JoinNetWork() {
  */
 func (n *Node) GenesisBlock() {
 	genesis := n.consensusAlgo.GenesisBlock()
+	DagGenesis := n.consensusAlgo.GenesisDagBlock()
 	n.receiveBlock(genesis)
+	n.receiveBlock(DagGenesis)
 }
 
 /**
@@ -364,6 +373,7 @@ func (n *Node) miningDag() {
  */
 // TODO
 func (n *Node) receiveBlock(block IBlock) {
+
 	if block.GetType() == settings.CHAIN_BLOCK{
 		if n.consensusAlgo.IsReceivedBlockValid(block, n.block) {
 			//如果共识协议判断该区块是正确的
@@ -378,9 +388,16 @@ func (n *Node) receiveBlock(block IBlock) {
 			// Generates a new mining task
 			// 新建挖矿任务
 			n.mining()
-			// update DAGMing
-			// TODO update DAGMing
 
+			n.currentGraph = graph.New()
+
+			// TODO update DAGMing
+			if n.miningDagTask !=nil{
+				RemoveTask(n.miningDagTask)
+			}
+			n.miningDag()
+			n.miningTask.(*MintingTask).SetConfirmedBlocks([]IBlock{})
+			n.miningDagTask.(*MintingTask).SetConfirmedBlocks([]IBlock{})
 
 			// Advertise received block
 			// 广播给其他节点区块的到达
@@ -400,8 +417,36 @@ func (n *Node) receiveBlock(block IBlock) {
 			Simulator.ArriveBlock(block, n)
 		}
 	}else if block.GetType() == settings.DAG_BLOCK{
-			// TODO handle and restart DAG_Mining
+		//fmt.Printf("%v,%v\n",n.GetNodeID() ,block.GetType())
 
+
+
+		// TODO handle and restart DAG_Mining
+		if n.miningDagTask !=nil{
+			RemoveTask(n.miningDagTask)
+		}
+		n.miningDag()
+
+		// TODo handle graph
+		if block.GetParent() == n.block{
+			n.currentGraph.AddNode(block)
+			for _,node := range block.GetConfirmedBlocks(){
+				fmt.Print("here")
+				n.currentGraph.AddEdge(block,node)
+			}
+			var tmpConfirmedBlocks []IBlock
+			for _,node := range n.currentGraph.GetNoIndegreeNodes(){
+				tmpConfirmedBlocks = append(tmpConfirmedBlocks, node.(IBlock))
+			}
+			n.miningTask.(*MintingTask).SetConfirmedBlocks(tmpConfirmedBlocks)
+			n.miningDagTask.(*MintingTask).SetConfirmedBlocks(tmpConfirmedBlocks)
+		}
+
+
+		n.toSendBlocks.PushBack(block)
+		if !n.sendingBlock {
+			n.SendNextBlockMessage()
+		}
 	}
 
 
@@ -422,7 +467,7 @@ func (n *Node) ReceiveMessage(message IAbstractMessageTask) {
 			// 如果接收到的区块最近已经下载过了，那么就丢弃
 			return
 		}
-		if n.downloadedBlocks.Size() > 10 {
+		if n.downloadedBlocks.Size() > settings.THROUGHPUT*2 {
 			// 如果接收到的区块个数大于一定了阈值，那么删除比较早接收到的区块
 			n.downloadedBlocks.Remove(0)
 		}
@@ -445,8 +490,10 @@ func (n *Node) SendNextBlockMessage() {
 	if n.toSendBlocks.Len() > 0 {
 		n.sendingBlock = true
 
-		block := n.toSendBlocks.Front().Value
 
+
+
+		block := n.toSendBlocks.Front().Value
 		it := n.routingTable.GetNeighbors().Iterator()
 		for j:=1;it.Next();j++ {
 
@@ -463,6 +510,7 @@ func (n *Node) SendNextBlockMessage() {
 			PutTask(blockMessageTask)
 		}
 		n.toSendBlocks.Remove(n.toSendBlocks.Front())
+
 
 	} else {
 		n.sendingBlock = false

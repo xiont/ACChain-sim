@@ -31,6 +31,7 @@ type ProofOfWorkBlock struct {
 	totalDifficulty *big.Int
 	nextDifficulty  *big.Int
 	blockType string
+	confirmedBlocks []IBlock
 }
 
 //Override
@@ -42,7 +43,11 @@ func (powb *ProofOfWorkBlock) GetType() string {
 	return powb.blockType
 }
 
-func NewProofOfWorkBlock(parent *ProofOfWorkBlock, minter *Node, time int64, difficulty *big.Int) *ProofOfWorkBlock {
+func (powb *ProofOfWorkBlock) GetConfirmedBlocks() []IBlock {
+	return powb.confirmedBlocks
+}
+
+func NewProofOfWorkBlock(parent *ProofOfWorkBlock, minter *Node, time int64, difficulty *big.Int,confirmedBlocks []IBlock) *ProofOfWorkBlock {
 
 	var totalDifficulty *big.Int = big.NewInt(0)
 	var nextDifficulty *big.Int = big.NewInt(0)
@@ -62,10 +67,11 @@ func NewProofOfWorkBlock(parent *ProofOfWorkBlock, minter *Node, time int64, dif
 		totalDifficulty,
 		nextDifficulty,
 		settings.CHAIN_BLOCK,
+		confirmedBlocks,
 	}
 }
 
-func NewDagProofOfWorkBlock(parent *ProofOfWorkBlock, minter *Node, time int64, difficulty *big.Int) *ProofOfWorkBlock {
+func NewDagProofOfWorkBlock(parent *ProofOfWorkBlock, minter *Node, time int64, difficulty *big.Int,confirmedBlocks []IBlock) *ProofOfWorkBlock {
 
 	return &ProofOfWorkBlock{
 		NewBlock(parent, minter, time),
@@ -73,6 +79,7 @@ func NewDagProofOfWorkBlock(parent *ProofOfWorkBlock, minter *Node, time int64, 
 		nil,
 		difficulty,
 		settings.DAG_BLOCK,
+		confirmedBlocks,
 	}
 }
 
@@ -128,7 +135,7 @@ func (powb *ProofOfWorkBlock) GenesisBlock(minter *Node) *ProofOfWorkBlock {
 	// 比特币总每次调整不超过4倍
 	GenesisNextDifficulty = GenesisNextDifficulty.Mul(big.NewInt(totalMiningPower), big.NewInt(Simulator.GetTargetInterval()))
 
-	return NewProofOfWorkBlock(nil, minter, 0, big.NewInt(0))
+	return NewProofOfWorkBlock(nil, minter, 0, big.NewInt(0),[]IBlock{})
 }
 
 func (powb *ProofOfWorkBlock) GenesisDagBlock(minter *Node) *ProofOfWorkBlock {
@@ -148,5 +155,5 @@ func (powb *ProofOfWorkBlock) GenesisDagBlock(minter *Node) *ProofOfWorkBlock {
 	// 比特币总每次调整不超过4倍
 	GenesisNextDifficulty = GenesisNextDifficulty.Mul(big.NewInt(totalMiningPower), big.NewInt(Simulator.GetTargetInterval()))
 
-	return NewDagProofOfWorkBlock(nil, minter, 0, big.NewInt(0))
+	return NewDagProofOfWorkBlock(nil, minter, 0, big.NewInt(0),[]IBlock{})
 }

@@ -1,5 +1,7 @@
 package settings
 
+import "acchain-sim/graph"
+
 /**
  * The number of nodes participating in the blockchain network.
  */
@@ -72,11 +74,12 @@ var BLOCK_SIZE int64 = 20000 //6110;//8000;//535000;//0.5MB
 // protocol type
 const (
 	BLOCK_MESSAGE = "block_message"
-
 	DAG_BLOCK = "dag"
 	CHAIN_BLOCK = "chain"
 )
 
 
 // Other parameter
-var THROUGHPUT int = 2  - 1
+var THROUGHPUT int = 4  - 1
+
+var GraphChain = make(map[interface{}]*graph.Graph)

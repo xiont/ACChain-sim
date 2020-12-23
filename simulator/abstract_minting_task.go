@@ -23,6 +23,7 @@ type IAbstractMintingTask interface {
 	ITask
 	GetMinter() *Node
 	GetParent() IBlock
+	SetConfirmedBlocks(block []IBlock)
 }
 
 var _ IAbstractMintingTask = new(AbstractMintingTask)
@@ -74,5 +75,9 @@ func (amt *AbstractMintingTask) GetInterval() int64 {
 }
 
 func (amt *AbstractMintingTask) Run() {
+	panic("abstract method")
+}
+
+func (mt *AbstractMintingTask) SetConfirmedBlocks(block []IBlock){
 	panic("abstract method")
 }

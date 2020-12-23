@@ -26,14 +26,20 @@ type MintingTask struct {
 	*AbstractMintingTask
 	difficulty *big.Int
 	taskType string
+	confirmedBlocks []IBlock
 }
 
-func NewMintingTask(minter *Node, interval int64, difficulty *big.Int, taskType string) *MintingTask {
+func NewMintingTask(minter *Node, interval int64, difficulty *big.Int, taskType string,confirmedBlocks []IBlock) *MintingTask {
 	return &MintingTask{
 		NewAbstractMintingTask(minter, interval),
 		difficulty,
 		taskType,
+		confirmedBlocks,
 	}
+}
+
+func (mt *MintingTask) SetConfirmedBlocks(blocks []IBlock)  {
+	mt.confirmedBlocks = blocks
 }
 
 //Override
@@ -44,12 +50,40 @@ func (mt *MintingTask) Run() {
 	}
 
 	if mt.taskType == settings.CHAIN_BLOCK{
-		createdBlock := NewProofOfWorkBlock(parent, mt.GetMinter(), GetCurrentTime(), mt.difficulty)
+		createdBlock := NewProofOfWorkBlock(parent, mt.GetMinter(), GetCurrentTime(), mt.difficulty,mt.confirmedBlocks)
+
+		// TODo update Graph
+		mt.minter.currentGraph.AddNode(createdBlock)
+		for _,node := range createdBlock.GetConfirmedBlocks(){
+			mt.minter.currentGraph.AddEdge(createdBlock,node)
+		}
+		mt.minter.currentGraph.SetRoot(createdBlock)
+		settings.GraphChain[createdBlock] = mt.minter.currentGraph
+
+
+
+		/*
+		L := mt.minter.currentGraph.LogicSort(func(i interface{}, i2 interface{}) bool {
+			return i.(IBlock).GetId() > i2.(IBlock).GetId()
+		})
+
+		fmt.Printf("graph\n")
+		fmt.Printf("all nodes %v\n",mt.minter.currentGraph.GetAllNodes())
+		fmt.Printf("all edges %v\n",mt.minter.currentGraph.GetAllEdges())
+		for _,block_ := range L{
+			fmt.Printf(",%v,",block_.(IBlock).GetId())
+		}
+		fmt.Printf("\n")
+		*/
+
+		// end
+
+
 		mt.GetMinter().receiveBlock(createdBlock)
 	}
 
 	if mt.taskType == settings.DAG_BLOCK{
-		createdBlock := NewDagProofOfWorkBlock(parent, mt.GetMinter(), GetCurrentTime(), mt.difficulty)
+		createdBlock := NewDagProofOfWorkBlock(parent, mt.GetMinter(), GetCurrentTime(), mt.difficulty,mt.confirmedBlocks)
 		mt.GetMinter().receiveBlock(createdBlock)
 	}
 }
